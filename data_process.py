@@ -66,12 +66,36 @@ def read_chunk():
     print chunk
 
 
+def data_filter(HD1, HD2):
+    df = pd.read_csv('TAB_VEH_15MIN_ADDBLACK.csv', encoding='utf-8').fillna(0)
+    df_38 = pd.DataFrame(columns=['SBBH', 'JCSJ', 'VEH_TOTAL', 'JB_COUNT', 'JP_COUNT', 'BLACK_COUNT',
+                                     'AVG_SPEED', 'MAX_SPEED', 'MIN_SPEED'])
+    df_39 = pd.DataFrame(columns=['SBBH', 'JCSJ', 'VEH_TOTAL', 'JB_COUNT', 'JP_COUNT', 'BLACK_COUNT',
+                                  'AVG_SPEED', 'MAX_SPEED', 'MIN_SPEED'])
+    for i in df.index:
+        if df.loc[i].values[0:1] == HD1:
+            df_38 = df_38.append(df.loc[i], ignore_index=True)
+        elif df.loc[i].values[0:1] == HD2:
+            df_39 = df_39.append(df.loc[i], ignore_index=True)
+
+    df_38.to_csv('df_38.csv')
+    df_39.to_csv('df_39.csv')
+
+
+def read_store_data():
+    df = pd.read_csv('speed-flow-storage.csv', encoding='utf-8').fillna(0)
+    for index, row in df.iterrows():
+        print int(row['flow'])
+
+
 if __name__ == '__main__':
-    # general_figure('HD001038', '2015/3/10')
-    date = '2015/12/9'
-    day_flow_figure('HD001038', date)
-    day_flow_figure('HD001039', date)
-    # search_data('HD001038', '2015/1/16')
+    # date = '2015/12/5'
+    # day_flow_figure('HD001038', date)
+    # day_flow_figure('HD001039', date)
+    # data_filter('HD001038', 'HD001039')
+    # read_store_data()
+    for i in range(1, 3):
+        print i
 
 
 

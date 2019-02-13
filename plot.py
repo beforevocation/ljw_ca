@@ -68,7 +68,11 @@ def road_visualization_dynamic(road, time_interval, pause_time):
     cmap = mpl.colors.ListedColormap(colors)
 
     temp_flow = 0
+    temp_flow_fast = 0
+    temp_flow_other = 0
     temp_speed = 0
+    temp_speed_fast = 0
+    temp_speed_other = 0
     temp_travel_time = 0
 
     '''list to storage'''
@@ -95,6 +99,12 @@ def road_visualization_dynamic(road, time_interval, pause_time):
     ax2.axis('off')
     ax3.axis('off')
     time_space_count = 0
+    '''写入CSV'''
+    out = open('speed-flow-storage.csv', 'a')
+    csv_write = csv.writer(out, dialect='excel')
+    title = ['speed1', 'flow1', 'speed2-3', 'flow2-3', 'flow-all']
+    csv_write.writerow(title)
+    '''写入CSV'''
     '''可视化界面布局end'''
     for t in range(road.simulation_times):
         for i in range(1, road.lanes + 1):
@@ -108,25 +118,40 @@ def road_visualization_dynamic(road, time_interval, pause_time):
         str_limit_end = 'limit end= %d' % (road.limit_end + 1)
         str_travel_time = 'travel time=%.2f s' % (road.travel_time/road.count_flow if road.count_flow != 0 else 0)
         travel_speed = (road.travel_speed/road.count_flow if road.count_flow != 0 else 0)
-        str_travel_speed = 'travel speed=%.2f cells/s' % travel_speed
-        str_flow = 'traffic flow= %d' % road.count_flow
-        str_density = 'traffic density= %.2f' % (road.count_flow/travel_speed if travel_speed != 0 else 0)
+        travel_speed_fast = (road.travel_speed_fast/road.count_flow_fast if road.count_flow_fast != 0 else 0)
+        travel_speed_other = (road.travel_speed_other/road.count_flow_other if road.count_flow_other != 0 else 0)
+        str_travel_speed = 'travel speed (all lanes)=%.2f cells/s' % travel_speed
+        str_travel_speed_fast = 'travel speed (fast lane)=%.2f cells/s' % travel_speed_fast
+        str_travel_speed_other = 'travel speed (other lanes)=%.2f cells/s' % travel_speed_other
+        str_flow = 'traffic flow sum (all lanes)= %d' % road.count_flow
+        str_flow_fast = 'traffic flow sum (fast lane)= %d' % road.count_flow_fast
+        str_flow_other = 'traffic flow sum (other lanes)= %d' % road.count_flow_other
+        str_density = 'traffic density (all lanes)= %.2f' % (road.count_flow/travel_speed if travel_speed != 0 else 0)
         str_switch_counter = 'switch_times= % d' % road.switch_counter
-        ax2.text(0, 0, str_t)
-        ax2.text(0, 0.15, str_flow)
-        ax2.text(0, 0.3, str_limit_begin)
-        ax2.text(0, 0.45, str_limit_end)
-        ax2.text(0, 0.6, str_travel_time)
-        ax2.text(0, 0.75, str_travel_speed)
-        ax2.text(0, 0.9, str_density)
-        ax2.text(0, 1.05, str_switch_counter)
+        ax2.text(0, 0.9, str_t)
+        ax2.text(0, 0.15, str_density)
+        ax2.text(0, 0.6, str_flow_fast)
+        ax2.text(0, 0.45, str_flow_other)
+        ax2.text(0, 0.3, str_travel_speed)
+        # ax2.text(1.5, 0.3, str_travel_speed_fast)
+        # ax2.text(1.5, 0.45, str_travel_speed_other)
+        # ax2.text(0, 0.6, str_travel_time)
+        ax2.text(0, 0.75, str_flow)
         '''每一时间步一展示数据end'''
         '''每t时间步展示数据begin'''
         if t % time_interval == 0:
             interval_flow = road.count_flow - temp_flow
             temp_flow = road.count_flow
+            interval_flow_fast = road.count_flow_fast - temp_flow_fast
+            temp_flow_fast = road.count_flow_fast
+            interval_flow_other = road.count_flow_other - temp_flow_other
+            temp_flow_other = road.count_flow_other
             interval_speed = road.travel_speed - temp_speed
             temp_speed = road.travel_speed
+            interval_speed_fast = road.travel_speed_fast - temp_speed_fast
+            temp_speed_fast = road.travel_speed_fast
+            interval_speed_other = road.travel_speed_other - temp_speed_other
+            temp_speed_other = road.travel_speed_other
             interval_travel_time = road.travel_time - temp_travel_time
             temp_travel_time = road.travel_time
             interval_travel_speed = interval_speed / interval_flow if interval_flow != 0 else 0
@@ -155,22 +180,32 @@ def road_visualization_dynamic(road, time_interval, pause_time):
             # ax7.set_xlabel('density')
             # ax7.set_ylabel('flow')
             '''写入CSV'''
-            out = open('speed-flow-storage.csv', 'w')
+            out = open('speed-flow-storage.csv', 'a')
             csv_write = csv.writer(out, dialect='excel')
-            csv_write.writerow(speed_list)
-            csv_write.writerow(flow_list)
+            newline = [interval_speed_fast, interval_flow_fast, interval_speed_other, interval_flow_other, interval_flow]
+            csv_write.writerow(newline)
             '''写入CSV'''
         '''每t时间步展示数据end'''
-        str_interval_flow = 'interval flow= %d' % interval_flow
+        str_interval_flow = '15min flow (all lanes)= %d' % interval_flow
+        str_interval_flow_fast = '15min flow (fast lane)= %d' % interval_flow_fast
+        str_interval_flow_other = '15min flow (other lanes)= %d' % interval_flow_other
         interval_travel_speed = interval_speed / interval_flow if interval_flow != 0 else 0
-        str_interval_traval_speed = 'interval travel speed= %.2f' % interval_travel_speed
-        str_interval_density = 'interval density= %.2f' % (interval_flow/interval_travel_speed if interval_travel_speed != 0 else 0)
-        str_interval_travel_time = 'interval travel time= %.2f' % (interval_travel_time/interval_flow if interval_flow != 0 else 0)
-        ax2.text(0, -0.15, str_interval_flow)
-        ax2.text(0, -0.3, str_interval_traval_speed)
-        ax2.text(0, -0.45, str_interval_density)
-        ax2.text(0, -0.6, str_interval_travel_time)
-        ax1.imshow(road.positionArray, cmap=cmap)
+        interval_travel_speed_fast = interval_speed_fast / interval_flow_fast if interval_flow_fast != 0 else 0
+        interval_travel_speed_other = interval_speed_other / interval_flow_other if interval_flow_other != 0 else 0
+        str_interval_traval_speed = '15min travel speed (all lanes)= %.2f' % interval_travel_speed
+        str_interval_traval_speed_fast = '15min travel speed (fast lane)= %.2f' % interval_travel_speed_fast
+        str_interval_traval_speed_oter = '15min travel speed (other lanes)= %.2f' % interval_travel_speed_other
+        str_interval_density = '15min density= %.2f' % (interval_flow/interval_travel_speed if interval_travel_speed != 0 else 0)
+        str_interval_travel_time = '15min travel time= %.2f' % (interval_travel_time/interval_flow if interval_flow != 0 else 0)
+        ax2.text(1, 0.9, str_interval_flow)
+        ax2.text(1, 0.75, str_interval_flow_fast)
+        ax2.text(1, 0.6, str_interval_flow_other)
+        ax2.text(1, 0.15, str_interval_traval_speed_oter)
+        ax2.text(1, 0.3, str_interval_traval_speed_fast)
+        ax2.text(1, 0.45, str_interval_traval_speed)
+        # ax2.text(0, -0.45, str_interval_density)
+        # ax2.text(0, -0.6, str_interval_travel_time)
+        ax1.imshow(road.positionArray[:, 600:645], cmap=cmap)
         ax1.axis('off')
         plt.pause(pause_time)
         ax2.clear()
@@ -183,7 +218,7 @@ if __name__ == '__main__':
     colors = ['white', 'blue', 'black']
     cmap = mpl.colors.ListedColormap(colors)
 
-    time_interval = 10
+    time_interval = 900
     pause_time = 1
 
     road = road.Road()

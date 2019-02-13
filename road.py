@@ -48,6 +48,12 @@ class Road(object):
         self.vmax1 = cp.getint('road', 'vmax1')
         self.vmax2 = cp.getint('road', 'vmax2')
         self.vmax3 = cp.getint('road', 'vmax3')
+        self.count_flow_fast = 0
+        self.count_flow_other = 0
+        self.travel_time_fast = 0
+        self.travel_time_other = 0
+        self.travel_speed_fast = 0
+        self.travel_speed_other = 0
         if self.iscongestion:
             self.congestion_point_lane = cp.getint('road', 'congestion_point_lane')
             self.congestion_point_point = cp.getint('road', 'congestion_point_point')
@@ -190,6 +196,14 @@ class Road(object):
                                     raise RuntimeError('congestion conflict')
                         '''流量&总行程时间&总行程车速统计begin'''
                         if j <= self.limit_end <= position_next:
+                            if i == 1:
+                                self.count_flow_fast += 1
+                                self.travel_time_fast += speedCounter[i, j]
+                                self.travel_speed_fast += (self.limit_end - self.limit_begin) / speedCounter[i, j]
+                            elif i != 1:
+                                self.count_flow_other += 1
+                                self.travel_time_other += speedCounter[i, j]
+                                self.travel_speed_other += (self.limit_end - self.limit_begin) / speedCounter[i, j]
                             self.count_flow += 1
                             self.travel_time += speedCounter[i, j]
                             self.travel_speed += (self.limit_end - self.limit_begin) / speedCounter[i, j]
@@ -225,17 +239,49 @@ def switch_lane(positionArray, i, lanes, vmax, right_change_condition, left_chan
             if positionArray[i, j] == 1:
                 if i == 1:
                     change = True
+                    '''判断位置当量begin'''
+                    if j - vmax - 1 >= 0:
+                        for d in range(j - 1, j - vmax - 1, -1):
+                            if positionArray[i + 1, d] == 1:
+                                if d + speedArray[i + 1, d] > j + speedArray[i, j]:
+                                    change = False
+                                break
+                    '''判断位置当量end'''
                     if positionArray[i + 1, j] == 1 or positionArray[i + 1, j] == 2:
                         change = False
                     right_change_condition[i, j] = change
                 elif i == lanes:
                     change = True
+                    '''判断位置当量begin'''
+                    if j - vmax - 1 >= 0:
+                        for d in range(j - 1, j - vmax - 1, -1):
+                            if positionArray[i - 1, d] == 1:
+                                if d + speedArray[i - 1, d] > j + speedArray[i, j]:
+                                    change = False
+                                break
+                    '''判断位置当量begin'''
                     if positionArray[i - 1, j] == 1 or positionArray[i - 1, j] == 2:
                         change = False
                     left_change_condition[i, j] = change
                 elif 1 < i < lanes:
                     change_left = True
                     change_right = True
+                    '''判断位置当量begin'''
+                    if j - vmax - 1 >= 0:
+                        for d in range(j - 1, j - vmax - 1, -1):
+                            if positionArray[i - 1, d] == 1:
+                                if d + speedArray[i - 1, d] > j + speedArray[i, j]:
+                                    change_left = False
+                                break
+                    '''判断位置当量begin'''
+                    '''判断位置当量begin'''
+                    if j - vmax - 1 >= 0:
+                        for d in range(j - 1, j - vmax - 1, -1):
+                            if positionArray[i + 1, d] == 1:
+                                if d + speedArray[i + 1, d] > j + speedArray[i, j]:
+                                    change_right = False
+                                break
+                    '''判断位置当量begin'''
                     if positionArray[i - 1, j] == 1 or positionArray[i - 1, j] == 2:
                         change_left = False
                     if positionArray[i + 1, j] == 1 or positionArray[i + 1, j] == 2:
@@ -327,16 +373,18 @@ def switch_lane(positionArray, i, lanes, vmax, right_change_condition, left_chan
             if positionArray[i, j] == 1:
                 if i == 1:
                     change = True
-                    tempvmax = vmax if islimit else road.get_vmax(i + 1)
-                    for r in range(j - tempvmax - 1, j + 1):
+                    tempvmax1 = vmax if islimit else road.get_vmax(i + 1)
+                    '''后车距离'''
+                    for r in range(j - tempvmax1 - 1, j + 1):
                         if positionArray[i + 1, r] == 1 or positionArray[i + 1, r] == 2:
                             change = False
                             break
+                    '''后车距离'''
                     right_change_condition[i, j] = change
                 elif i == lanes:
                     change = True
-                    tempvmax = vmax if islimit else road.get_vmax(i - 1)
-                    for l in range(j - tempvmax - 1, j + 1):
+                    tempvmax2 = vmax if islimit else road.get_vmax(i - 1)
+                    for l in range(j - tempvmax2 - 1, j + 1):
                         if positionArray[i - 1, l] == 1 or positionArray[i - 1, l] == 2:
                             change = False
                             break
@@ -360,23 +408,67 @@ def switch_lane(positionArray, i, lanes, vmax, right_change_condition, left_chan
             '''计算是否满足换道动机（即是否换道）begin'''
             if positionArray[i, j] == 1:
                 if i == 1:
+                    '''前车距离'''
+                    drf_condition = True
+                    if right_change_condition[i, j] == 1 and j + road.get_vmax(i + 1) + 1 < road.length:
+                        drf = 0
+                        for r in range(j + 1, j + road.get_vmax(i + 1) + 1):
+                            if positionArray[i + 1, r] == 1 or positionArray[i + 1, r] == 2:
+                                drf = r - j
+                                break
+                        if drf >= min(speedArray[i, j] + 1, vmax):
+                            drf_condition = False
+                    '''前车距离'''
                     if min(speedArray[i, j] + 1, vmax) > gap[i, j] and right_change_condition[
                         i, j] == 1 and random.uniform(
-                            0, 1) < switch_lane_prob:
+                            0, 1) < switch_lane_prob and drf_condition:
                         right_change_real[i, j] = 1
                 elif 1 < i < lanes:
+                    '''前车距离begin'''
+                    drf_condition = True
+                    if left_change_condition[i, j] == 1 and j + road.get_vmax(i + 1) + 1 < road.length:
+                        drf = 0
+                        for r in range(j + 1, j + road.get_vmax(i + 1) + 1):
+                            if positionArray[i + 1, r] == 1 or positionArray[i + 1, r] == 2:
+                                drf = r - j
+                                break
+                        if drf >= min(speedArray[i, j] + 1, vmax):
+                            drf_condition = False
+                    '''前车距离end'''
                     if min(speedArray[i, j] + 1, vmax) > gap[i, j] and right_change_condition[
                         i, j] == 1 and random.uniform(
-                            0, 1) < switch_lane_prob:
+                            0, 1) < switch_lane_prob and drf_condition:
                         right_change_real[i, j] = 1
-                    if min(speedArray[i, j] + 1, vmax) > gap[i, j] and left_change_condition[
+                    '''1车道前车距离begin'''
+                    dlf_condition = True
+                    if left_change_condition[i, j] == 1 and j + road.get_vmax(i - 1) + 1 < road.length:
+                        drf = 0
+                        for r in range(j + 1, j + road.get_vmax(i - 1) + 1):
+                            if positionArray[i - 1, r] == 1 or positionArray[i - 1, r] == 2:
+                                drf = r - j
+                                break
+                        if drf >= min(speedArray[i, j] + 1, vmax):
+                            dlf_condition = False
+                    '''1车道前车距离end'''
+                    if left_change_condition[
                         i, j] == 1 and random.uniform(
-                            0, 1) < switch_lane_prob:
+                            0, 1) < switch_lane_prob and dlf_condition:
                         left_change_real[i, j] = 1
                 elif i == lanes:
-                    if min(speedArray[i, j] + 1, vmax) > gap[i, j] and left_change_condition[
+                    '''前车距离'''
+                    dlf_condition = True
+                    if left_change_condition[i, j] == 1 and j + tempvmax2 + 1 < road.length:
+                        drf = 0
+                        for r in range(j + 1, j + tempvmax2 + 1):
+                            if positionArray[i - 1, r] == 1 or positionArray[i - 1, r] == 2:
+                                drf = r - j
+                                break
+                        if drf >= min(speedArray[i, j] + 1, vmax):
+                            dlf_condition = False
+                    '''前车距离'''
+                    if left_change_condition[
                         i, j] == 1 and random.uniform(
-                            0, 1) < switch_lane_prob:
+                            0, 1) < switch_lane_prob and dlf_condition:
                         left_change_real[i, j] = 1
             '''计算是否满足换道动机（即是否换道）end'''
             '''进行换道begin'''
