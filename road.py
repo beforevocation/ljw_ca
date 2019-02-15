@@ -41,7 +41,7 @@ class Road(object):
         self.count_flow = 0
         self.travel_time = 0
         self.travel_speed = 0
-        self.switch_lane_prob = cp.getint('road', 'switch_lane_prob')
+        self.switch_lane_prob = cp.getfloat('road', 'switch_lane_prob')
         self.switch_counter = 0
         self.limit_speed = cp.getint('road', 'limit_speed')
         self.iscongestion = cp.getboolean('road', 'iscongestion')
