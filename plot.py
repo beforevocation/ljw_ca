@@ -85,19 +85,6 @@ def road_visualization_dynamic(road, time_interval, pause_time):
     speed_list = list()
     density_list = list()
     '''list for basic_figure'''
-
-    plt.ion()
-    fig = plt.figure()
-    '''可视化界面布局begin'''
-    ax1 = fig.add_subplot(311)
-    ax2 = fig.add_subplot(334)
-    ax3 = fig.add_subplot(335)
-    # ax4 = fig.add_subplot(336)
-    ax5 = fig.add_subplot(337)
-    # ax6 = fig.add_subplot(338)
-    # ax7 = fig.add_subplot(339)
-    ax2.axis('off')
-    ax3.axis('off')
     time_space_count = 0
     '''写入CSV'''
     out = open('speed-flow-storage.csv', 'a')
@@ -107,6 +94,7 @@ def road_visualization_dynamic(road, time_interval, pause_time):
     '''写入CSV'''
     '''可视化界面布局end'''
     for t in range(road.simulation_times):
+        print 'timestamp:' + str(t)
         for i in range(1, road.lanes + 1):
             carr = car.Car()
             if random.uniform(0, 1) < road.prob_in:
@@ -128,15 +116,6 @@ def road_visualization_dynamic(road, time_interval, pause_time):
         str_flow_other = 'traffic flow sum (other lanes)= %d' % road.count_flow_other
         str_density = 'traffic density (all lanes)= %.2f' % (road.count_flow/travel_speed if travel_speed != 0 else 0)
         str_switch_counter = 'switch_times= % d' % road.switch_counter
-        ax2.text(0, 0.9, str_t)
-        ax2.text(0, 0.15, str_density)
-        ax2.text(0, 0.6, str_flow_fast)
-        ax2.text(0, 0.45, str_flow_other)
-        ax2.text(0, 0.3, str_travel_speed)
-        # ax2.text(1.5, 0.3, str_travel_speed_fast)
-        # ax2.text(1.5, 0.45, str_travel_speed_other)
-        # ax2.text(0, 0.6, str_travel_time)
-        ax2.text(0, 0.75, str_flow)
         '''每一时间步一展示数据end'''
         '''每t时间步展示数据begin'''
         if t % time_interval == 0:
@@ -169,19 +148,12 @@ def road_visualization_dynamic(road, time_interval, pause_time):
                 flow_list.append(interval_flow)
                 density_list.append((interval_flow / interval_travel_speed if interval_travel_speed != 0 else 0))
                 time_space_count += 1
-            # ax4.scatter(time_space_x, time_space_y, s=1, c='b')
-            ax5.scatter(flow_list, speed_list, c='b')
-            ax5.set_xlabel('flow')
-            ax5.set_ylabel('speed')
-            # ax6.scatter(density_list, speed_list, c='b')
-            # ax6.set_xlabel('density')
-            # ax6.set_ylabel('speed')
-            # ax7.scatter(density_list, flow_list, c='b')
-            # ax7.set_xlabel('density')
-            # ax7.set_ylabel('flow')
             '''写入CSV'''
             out = open('speed-flow-storage.csv', 'a')
             csv_write = csv.writer(out, dialect='excel')
+            interval_speed_fast = interval_speed_fast / interval_flow_fast if interval_flow_fast != 0 else 0
+            interval_speed_other = interval_speed_other / interval_flow_other if interval_flow_other != 0 else 0
+
             newline = [interval_speed_fast, interval_flow_fast, interval_speed_other, interval_flow_other, interval_flow]
             csv_write.writerow(newline)
             '''写入CSV'''
@@ -197,21 +169,7 @@ def road_visualization_dynamic(road, time_interval, pause_time):
         str_interval_traval_speed_oter = '15min travel speed (other lanes)= %.2f' % interval_travel_speed_other
         str_interval_density = '15min density= %.2f' % (interval_flow/interval_travel_speed if interval_travel_speed != 0 else 0)
         str_interval_travel_time = '15min travel time= %.2f' % (interval_travel_time/interval_flow if interval_flow != 0 else 0)
-        ax2.text(1, 0.9, str_interval_flow)
-        ax2.text(1, 0.75, str_interval_flow_fast)
-        ax2.text(1, 0.6, str_interval_flow_other)
-        ax2.text(1, 0.15, str_interval_traval_speed_oter)
-        ax2.text(1, 0.3, str_interval_traval_speed_fast)
-        ax2.text(1, 0.45, str_interval_traval_speed)
-        # ax2.text(0, -0.45, str_interval_density)
-        # ax2.text(0, -0.6, str_interval_travel_time)
-        ax1.imshow(road.positionArray[:, 600:645], cmap=cmap)
-        ax1.axis('off')
-        plt.pause(pause_time)
-        ax2.clear()
-        ax2.axis('off')
         road.progress(road.limit_speed)
-    plt.ioff()
 
 if __name__ == '__main__':
 

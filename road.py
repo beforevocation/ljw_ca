@@ -10,7 +10,7 @@ HAVECAR = 1
 WALL = 3
 EMPTY = 0
 CONGESTION = 2
-PROBSLOW = 0.1
+PROBSLOW = 0.3
 
 
 class Road(object):
@@ -102,9 +102,6 @@ class Road(object):
                     else:
                         islimit = False
                 '''确定当前的vmax：vmax or limit_speed'''
-                '''加速步骤begin'''
-                speedArray[i, j] = min(speedArray[i, j] + 1, vmax)
-                '''加速步骤end'''
                 '''计算前车距离begin'''
                 if positionArray[i, j] == 1 or positionArray[i, j] == 2:
                     if gap_position_temp - j - 1 < 0:
@@ -112,6 +109,13 @@ class Road(object):
                     gap[i, j] = gap_position_temp - j - 1
                     gap_position_temp = j
                 '''计算前车距离end'''
+                '''加速步骤begin'''
+                if speedArray[i, j] < 14:
+                    speedArray[i, j] = min(speedArray[i, j] + 1, vmax)
+                #时速超过100km/h的车辆考虑安全距离（100米）
+                elif gap[i, j] >= 14:
+                    speedArray[i, j] = min(speedArray[i, j] + 1, vmax)
+                '''加速步骤end'''
                 '''行程开始时间累计begin'''
                 if self.limit_begin <= j <= self.limit_end and speedCounter[i, j] != 0:
                     speedCounter[i, j] += 1
@@ -233,7 +237,8 @@ def switch_lane(positionArray, i, lanes, vmax, right_change_condition, left_chan
     for j in range(positionArray.shape[1] - 1, -1, -1):
         change_force = False
         if positionArray[i, j] == 1 and road.iscongestion and i == road.congestion_point_lane and j < road.congestion_point_point and j + vmax > road.congestion_point_point:
-            change_force = True
+            # change_force = True
+            pass
         if (timeWaited[i, j] != 0 and timeWaited[i, j] % (road.time_can_wait * 2) == 0) or change_force:
             '''计算换道条件begin'''
             if positionArray[i, j] == 1:
@@ -414,12 +419,13 @@ def switch_lane(positionArray, i, lanes, vmax, right_change_condition, left_chan
                         drf = 0
                         for r in range(j + 1, j + road.get_vmax(i + 1) + 1):
                             if positionArray[i + 1, r] == 1 or positionArray[i + 1, r] == 2:
-                                drf = r - j
+                                # drf = r - j
+                                drf_condition = False
                                 break
-                        if drf >= min(speedArray[i, j] + 1, vmax):
-                            drf_condition = False
-                    '''前车距离'''
-                    if min(speedArray[i, j] + 1, vmax) > gap[i, j] and right_change_condition[
+                        # if drf >= min(speedArray[i, j] + 1, vmax):
+                        #     drf_condition = False
+                    '''前车距离end'''
+                    if (j < road.length and gap[i, j] < 14 and speedArray[i, j] <= 4) and right_change_condition[
                         i, j] == 1 and random.uniform(
                             0, 1) < switch_lane_prob and drf_condition:
                         right_change_real[i, j] = 1
@@ -428,12 +434,14 @@ def switch_lane(positionArray, i, lanes, vmax, right_change_condition, left_chan
                     drf_condition = True
                     if left_change_condition[i, j] == 1 and j + road.get_vmax(i + 1) + 1 < road.length:
                         drf = 0
-                        for r in range(j + 1, j + road.get_vmax(i + 1) + 1):
-                            if positionArray[i + 1, r] == 1 or positionArray[i + 1, r] == 2:
-                                drf = r - j
+                        '''向快速车道换道的时候考虑快速车道前车距离'''
+                        for r in range(j + 1, j + 14 + 1):
+                            if r < road.length and (positionArray[i + 1, r] == 1 or positionArray[i + 1, r] == 2):
+                                # drf = r - j
+                                drf_condition = False
                                 break
-                        if drf >= min(speedArray[i, j] + 1, vmax):
-                            drf_condition = False
+                        # if drf >= min(speedArray[i, j] + 1, vmax):
+                        #     drf_condition = False
                     '''前车距离end'''
                     if min(speedArray[i, j] + 1, vmax) > gap[i, j] and right_change_condition[
                         i, j] == 1 and random.uniform(
@@ -445,28 +453,30 @@ def switch_lane(positionArray, i, lanes, vmax, right_change_condition, left_chan
                         drf = 0
                         for r in range(j + 1, j + road.get_vmax(i - 1) + 1):
                             if positionArray[i - 1, r] == 1 or positionArray[i - 1, r] == 2:
-                                drf = r - j
+                                # drf = r - j
+                                dlf_condition = False
                                 break
-                        if drf >= min(speedArray[i, j] + 1, vmax):
-                            dlf_condition = False
+                        # if drf >= min(speedArray[i, j] + 1, vmax):
+                        #     dlf_condition = False
                     '''1车道前车距离end'''
-                    if left_change_condition[
+                    if min(speedArray[i, j] + 1, vmax) > gap[i, j] and left_change_condition[
                         i, j] == 1 and random.uniform(
                             0, 1) < switch_lane_prob and dlf_condition:
                         left_change_real[i, j] = 1
                 elif i == lanes:
-                    '''前车距离'''
+                    '''前车距离begin'''
                     dlf_condition = True
                     if left_change_condition[i, j] == 1 and j + tempvmax2 + 1 < road.length:
                         drf = 0
                         for r in range(j + 1, j + tempvmax2 + 1):
                             if positionArray[i - 1, r] == 1 or positionArray[i - 1, r] == 2:
-                                drf = r - j
+                                # drf = r - j
+                                dlf_condition = False
                                 break
-                        if drf >= min(speedArray[i, j] + 1, vmax):
-                            dlf_condition = False
-                    '''前车距离'''
-                    if left_change_condition[
+                        # if drf >= min(speedArray[i, j] + 1, vmax):
+                        #     dlf_condition = False
+                    '''前车距离end'''
+                    if min(speedArray[i, j] + 1, vmax) > gap[i, j] and left_change_condition[
                         i, j] == 1 and random.uniform(
                             0, 1) < switch_lane_prob and dlf_condition:
                         left_change_real[i, j] = 1
